@@ -16,6 +16,7 @@ import {
   Routes,
   SlashCommandOptionsOnlyBuilder,
   UserContextMenuCommandInteraction,
+  Events,
 } from "discord.js";
 import { reactSpellWord } from "./emoji.js";
 import { rollCommand } from "./commands/roll.js";
@@ -36,16 +37,12 @@ const auth: Credentials = {
   token: DISCORD_TOKEN,
   client: APP_ID,
   publicKey: PUBLIC_KEY,
-  guildId: GUILD_ID
+  guildId: GUILD_ID,
 };
-
-interface ContainsBuilder {
-  builder: unknown;
-}
 
 export interface Command {
   builder: SlashCommandOptionsOnlyBuilder;
-  run: (interaction: ChatInputCommandInteraction) => Promise<void>;
+  run: (interaction: ChatInputCommandInteraction) => Promise<any>;
   autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
 }
 
@@ -60,24 +57,25 @@ export interface ContextMenu<
   ) => Promise<void>;
 }
 
-const commands = [rollCommand];
-const contexts: any = [];
+const commands: Command[] = [rollCommand];
+const contexts: ContextMenu[] = [];
 
 const rest = new REST({ version: "10" }).setToken(auth.token);
 
-try {
-  console.log("Started refreshing application (/) commands.");
-
-  await rest.put(Routes.applicationGuildCommands(auth.client, auth.guildId), {
-    body: (commands as ContainsBuilder[])
-      .concat(contexts)
-      .map((x) => x.builder),
-  });
-
-  console.log("Successfully reloaded application (/) commands.");
-} catch (error) {
-  console.error(error);
-}
+(async () => {
+  try {
+    console.log("Started refreshing application (/) commands.");
+    await rest.put(Routes.applicationGuildCommands(auth.client, auth.guildId), {
+      body: [
+        ...commands.map((c) => c.builder.toJSON()),
+        ...contexts.map((c) => c.builder.toJSON()),
+      ],
+    });
+    console.log("Successfully reloaded application (/) commands.");
+  } catch (error) {
+    console.error("Error registering commands:", error);
+  }
+})();
 
 const client = new Client({
   intents: [
@@ -87,44 +85,53 @@ const client = new Client({
   ],
 });
 
-let clientId: string;
-
-client.on("interactionCreate", async (interaction) => {
+client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+
+  console.log(`Interaction received: ${interaction.commandName}`);
 
   const cmd = commands.find((x) => x.builder.name === interaction.commandName);
 
-  if (cmd) {
+  if (!cmd) {
+    console.log(`No command handler found for: ${interaction.commandName}`);
+    return;
+  }
+
+  try {
     await cmd.run(interaction);
+  } catch (error) {
+    console.error(`Error running command ${interaction.commandName}:`, error);
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply("There was an error executing this command.");
+    } else {
+      await interaction.reply({
+        content: "There was an error executing this command.",
+        ephemeral: true,
+      });
+    }
   }
 });
 
-client.on("clientReady", (client) => {
-  console.log(`Logged in as ${client.user.tag}`);
-  clientId = client.user.id;
+client.on(Events.ClientReady, (c) => {
+  console.log(`✅ Logged in as ${c.user.tag}`);
 });
 
-client.on("messageCreate", async (msg) => {
-  await msg.fetch();
+client.on(Events.MessageCreate, async (msg) => {
+  if (msg.author.bot) return;
 
   const lowercase = msg.content.toLowerCase();
+  const botId = client.user?.id;
 
-  // Response to asking if this is real
-  if (msg.mentions.users.has(clientId) && lowercase.includes("is this real")) {
-    return await msg.reply(getMagic8BallAnswer());
-  }
-
-  // Is dit echt?
-  if (msg.mentions.users.has(clientId) && lowercase.includes("is dit echt")) {
-    return await msg.reply(getMagic8BallAnswerDutch());
-  }
-
-  // Ei
-  if (
-    msg.mentions.users.has(clientId) &&
-    lowercase.includes("are you an egg")
-  ) {
-    return await msg.react(getTransEggEmoji());
+  if (botId && msg.mentions.users.has(botId)) {
+    if (lowercase.includes("is this real")) {
+      return await msg.reply(getMagic8BallAnswer());
+    }
+    if (lowercase.includes("is dit echt")) {
+      return await msg.reply(getMagic8BallAnswerDutch());
+    }
+    if (lowercase.includes("are you an egg")) {
+      return await msg.react(getTransEggEmoji());
+    }
   }
 
   if (lowercase.includes("sick")) {
