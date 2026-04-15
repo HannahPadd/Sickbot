@@ -1,0 +1,34 @@
+{
+  "name": "sick-bot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Bot for SICK Discord",
+  "main": "dist/app.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.x"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "build:watch": "tsc --watch",
+    "run:watch": "nodemon dist/my-app.js --watch dist",
+    "start": "npm-run-all --parallel build:watch run:watch",
+    "register": "npx tsc && node dist/commands.js",
+    "dev": "npx tsc && node dist/app.js"
+  },
+  "author": "HannahPadd",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.26.3",
+    "dotenv": "^16.0.3",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.4",
+    "@types/express": "^5.0.6",
+    "@types/source-map-support": "^0.5.10",
+    "nodemon": "^3.1.14",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.2"
+  }
+}

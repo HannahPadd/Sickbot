@@ -1,0 +1,13 @@
+services:
+  sickbot:
+    build:
+      context: .
+      dockerfile: dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./package.json:/app/package.json
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
+    command: pnpm start
