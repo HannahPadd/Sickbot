@@ -21,7 +21,9 @@
   "dependencies": {
     "discord.js": "^14.26.3",
     "dotenv": "^16.0.3",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
